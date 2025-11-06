@@ -1,5 +1,6 @@
 package org.skypro.recommendation_service.repository;
 
+import org.skypro.recommendation_service.model.OperationType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -30,31 +31,30 @@ public class UserDataRepository {
     }
 
     /**
-     * Получаем общую сумму пополнений по продуктам указанного типа
+     * Получаем общую сумму операций по продуктам указанного типа и типа операции
      */
-    public BigDecimal getTotalDepositsAmount(UUID userId, String productType) {
+    public BigDecimal getTotalAmountByOperationType(UUID userId, String productType, OperationType operationType) {
         String sql = """
                 SELECT COALESCE(SUM(uo.amount), 0)
                 FROM user_operations uo
                 JOIN bank_products bp ON uo.product_id = bp.id
-                WHERE uo.user_id = ? AND bp.type = ? AND uo.operation_type = 'DEPOSIT'
+                WHERE uo.user_id = ? AND bp.type = ? AND uo.operation_type = ?
                 """;
-        BigDecimal result = jdbcTemplate.queryForObject(sql, BigDecimal.class, userId, productType);
+        BigDecimal result = jdbcTemplate.queryForObject(
+                sql, BigDecimal.class, userId, productType, operationType.name()
+        );
         return result != null ? result : BigDecimal.ZERO;
     }
 
     /**
-     * Получаем общую сумму трат по продуктам указанного типа
+     * Методы для обратной совместимости
      */
+    public BigDecimal getTotalDepositsAmount(UUID userId, String productType) {
+        return getTotalAmountByOperationType(userId, productType, OperationType.DEPOSIT);
+    }
+
     public BigDecimal getTotalSpendsAmount(UUID userId, String productType) {
-        String sql = """
-                SELECT COALESCE(SUM(uo.amount), 0)
-                FROM user_operations uo
-                JOIN bank_products bp ON uo.product_id = bp.id
-                WHERE uo.user_id = ? AND bp.type = ? AND uo.operation_type = 'SPEND'
-                """;
-        BigDecimal result = jdbcTemplate.queryForObject(sql, BigDecimal.class, userId, productType);
-        return result != null ? result : BigDecimal.ZERO;
+        return getTotalAmountByOperationType(userId, productType, OperationType.SPEND);
     }
 
     /**
