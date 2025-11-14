@@ -5,7 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.skypro.recommendation_service.model.OperationType;
+import org.skypro.recommendation_service.model.enums.OperationType;
 import org.skypro.recommendation_service.repository.UserDataRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -43,7 +43,7 @@ class UserDataRepositoryTest {
         when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), any(), any(), any()))
                 .thenReturn(new BigDecimal("1500"));
 
-        BigDecimal result = userDataRepository.getTotalAmountByOperationType(
+        BigDecimal result = userDataRepository.getTotalAmount(
                 userId, "SAVING", OperationType.DEPOSIT
         );
 
@@ -64,7 +64,7 @@ class UserDataRepositoryTest {
         when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), any(), any(), any()))
                 .thenReturn(new BigDecimal("800"));
 
-        BigDecimal result = userDataRepository.getTotalAmountByOperationType(
+        BigDecimal result = userDataRepository.getTotalAmount(
                 userId, "DEBIT", OperationType.SPEND
         );
 
@@ -85,7 +85,7 @@ class UserDataRepositoryTest {
         when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), any(), any(), any()))
                 .thenReturn(null);
 
-        BigDecimal result = userDataRepository.getTotalAmountByOperationType(
+        BigDecimal result = userDataRepository.getTotalAmount(
                 userId, "CREDIT", OperationType.DEPOSIT
         );
 

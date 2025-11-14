@@ -6,21 +6,14 @@ import java.util.List;
 import java.util.UUID;
 
 public class RecommendationResponse {
-
     @JsonProperty("user_id")
     private UUID userId;
 
     private List<RecommendationDTO> recommendations;
 
-    /**
-     * Конструктор по умолчанию нужен для правильной работы Spring/Jackson (создаёт пустой объект)
-     */
     public RecommendationResponse() {
     }
 
-    /**
-     * Параметризованный конструктор для бизнес-логики и тестирования
-     */
     public RecommendationResponse(UUID userId, List<RecommendationDTO> recommendations) {
         this.userId = userId;
         this.recommendations = recommendations;
