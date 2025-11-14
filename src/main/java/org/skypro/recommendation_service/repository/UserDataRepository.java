@@ -1,6 +1,6 @@
 package org.skypro.recommendation_service.repository;
 
-import org.skypro.recommendation_service.model.OperationType;
+import org.skypro.recommendation_service.model.enums.OperationType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -31,9 +31,23 @@ public class UserDataRepository {
     }
 
     /**
+     * Получаем количество транзакций по продуктам указанного типа
+     */
+    public int getTransactionCount(UUID userId, String productType) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM user_operations uo
+                JOIN bank_products bp ON uo.product_id = bp.id
+                WHERE uo.user_id = ? AND bp.type = ?
+                """;
+        Integer result = jdbcTemplate.queryForObject(sql, Integer.class, userId, productType);
+        return result != null ? result : 0;
+    }
+
+    /**
      * Получаем общую сумму операций по продуктам указанного типа и типа операции
      */
-    public BigDecimal getTotalAmountByOperationType(UUID userId, String productType, OperationType operationType) {
+    public BigDecimal getTotalAmount(UUID userId, String productType, OperationType operationType) {
         String sql = """
                 SELECT COALESCE(SUM(uo.amount), 0)
                 FROM user_operations uo
@@ -50,11 +64,11 @@ public class UserDataRepository {
      * Методы для обратной совместимости
      */
     public BigDecimal getTotalDepositsAmount(UUID userId, String productType) {
-        return getTotalAmountByOperationType(userId, productType, OperationType.DEPOSIT);
+        return getTotalAmount(userId, productType, OperationType.DEPOSIT);
     }
 
     public BigDecimal getTotalSpendsAmount(UUID userId, String productType) {
-        return getTotalAmountByOperationType(userId, productType, OperationType.SPEND);
+        return getTotalAmount(userId, productType, OperationType.SPEND);
     }
 
     /**
