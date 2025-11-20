@@ -1,7 +1,8 @@
-package org.skypro.recommendation_service.service.rule;
+package org.skypro.recommendation_service.service.rule.impl;
 
 import org.skypro.recommendation_service.model.dto.RecommendationDTO;
 import org.skypro.recommendation_service.repository.UserDataRepository;
+import org.skypro.recommendation_service.service.rule.RecommendationRuleSet;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;

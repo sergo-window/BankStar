@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.skypro.recommendation_service.configuration.DynamicRuleConditionConverter;
 import org.skypro.recommendation_service.model.rule.DynamicRuleCondition;
 
 import java.util.UUID;
@@ -28,8 +29,8 @@ public class DynamicRule {
     @Column(name = "product_id", nullable = false)
     private UUID productId;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "rule_condition", nullable = false, columnDefinition = "jsonb")  // ← измените здесь
+    @Convert(converter = DynamicRuleConditionConverter.class)
+    @Column(name = "rule_condition", nullable = false, columnDefinition = "TEXT")
     private DynamicRuleCondition condition;
 
     @Column(name = "active", nullable = false)

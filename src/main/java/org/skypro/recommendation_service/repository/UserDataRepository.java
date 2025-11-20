@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -13,13 +14,48 @@ public class UserDataRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    public UserDataRepository(@Qualifier("recommendationsJdbcTemplate") JdbcTemplate jdbcTemplate) {
+    public UserDataRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    /**
-     * Проверяем, использует ли пользователь продукты указанного типа
-     */
+    public UUID findUserIdByName(String username) {
+        String sql = """
+                SELECT id 
+                FROM bank_users 
+                WHERE CONCAT(first_name, ' ', last_name) ILIKE ?
+                """;
+
+        List<UUID> results = jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> UUID.fromString(rs.getString("id")),
+                username
+        );
+
+        return results.size() == 1 ? results.get(0) : null;
+    }
+
+    public String getUserNameById(UUID userId) {
+        String sql = """
+                SELECT first_name, last_name 
+                FROM bank_users 
+                WHERE id = ?
+                """;
+
+        try {
+            return jdbcTemplate.queryForObject(
+                    sql,
+                    (rs, rowNum) -> {
+                        String firstName = rs.getString("first_name");
+                        String lastName = rs.getString("last_name");
+                        return firstName + " " + lastName;
+                    },
+                    userId
+            );
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public boolean hasProductType(UUID userId, String productType) {
         String sql = """
                 SELECT COUNT(*) > 0
@@ -30,9 +66,6 @@ public class UserDataRepository {
         return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, userId, productType));
     }
 
-    /**
-     * Получаем количество транзакций по продуктам указанного типа
-     */
     public int getTransactionCount(UUID userId, String productType) {
         String sql = """
                 SELECT COUNT(*)
@@ -44,9 +77,6 @@ public class UserDataRepository {
         return result != null ? result : 0;
     }
 
-    /**
-     * Получаем общую сумму операций по продуктам указанного типа и типа операции
-     */
     public BigDecimal getTotalAmount(UUID userId, String productType, OperationType operationType) {
         String sql = """
                 SELECT COALESCE(SUM(uo.amount), 0)
@@ -60,9 +90,6 @@ public class UserDataRepository {
         return result != null ? result : BigDecimal.ZERO;
     }
 
-    /**
-     * Методы для обратной совместимости
-     */
     public BigDecimal getTotalDepositsAmount(UUID userId, String productType) {
         return getTotalAmount(userId, productType, OperationType.DEPOSIT);
     }
@@ -71,9 +98,6 @@ public class UserDataRepository {
         return getTotalAmount(userId, productType, OperationType.SPEND);
     }
 
-    /**
-     * Проверяем, больше ли сумма пополнений суммы трат для указанного типа продукта
-     */
     public boolean isDepositsGreaterThanSpends(UUID userId, String productType) {
         BigDecimal deposits = getTotalDepositsAmount(userId, productType);
         BigDecimal spends = getTotalSpendsAmount(userId, productType);

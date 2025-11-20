@@ -8,6 +8,7 @@ import org.skypro.recommendation_service.model.enums.*;
 import org.skypro.recommendation_service.model.rule.DynamicRuleCondition;
 import org.skypro.recommendation_service.repository.DynamicRuleRepository;
 import org.skypro.recommendation_service.repository.UserDataRepository;
+import org.skypro.recommendation_service.service.RuleStatisticService;
 import org.skypro.recommendation_service.service.cache.RecommendationCacheService;
 import org.springframework.stereotype.Service;
 
@@ -22,14 +23,17 @@ public class DynamicRuleService {
     private final DynamicRuleRepository dynamicRuleRepository;
     private final UserDataRepository userDataRepository;
     private final RecommendationCacheService cacheService;
+    private final RuleStatisticService ruleStatisticService;
 
     public DynamicRuleService(
             DynamicRuleRepository dynamicRuleRepository,
             UserDataRepository userDataRepository,
-            RecommendationCacheService cacheService) {
+            RecommendationCacheService cacheService,
+            RuleStatisticService ruleStatisticService) {
         this.dynamicRuleRepository = dynamicRuleRepository;
         this.userDataRepository = userDataRepository;
         this.cacheService = cacheService;
+        this.ruleStatisticService = ruleStatisticService;
     }
 
     public List<RecommendationDTO> checkDynamicRulesForUser(UUID userId) {
@@ -37,7 +41,15 @@ public class DynamicRuleService {
             List<DynamicRule> activeRules = dynamicRuleRepository.findByActiveTrue();
 
             return activeRules.stream()
-                    .filter(rule -> evaluateRule(rule.getCondition(), userId))
+                    .filter(rule -> {
+                        boolean matches = evaluateRule(rule.getCondition(), userId);
+                        if (matches) {
+                               ruleStatisticService.incrementRuleExecution(
+                                    rule.getId(), rule.getName()
+                            );
+                        }
+                        return matches;
+                    })
                     .map(rule -> new RecommendationDTO(
                             rule.getProductName(),
                             rule.getProductId(),
@@ -136,6 +148,7 @@ public class DynamicRuleService {
     }
 
     public void deleteRule(UUID ruleId) {
+        ruleStatisticService.deleteRuleStatistic(ruleId);
         dynamicRuleRepository.deleteById(ruleId);
         cacheService.clearDynamicRulesCache();
     }
