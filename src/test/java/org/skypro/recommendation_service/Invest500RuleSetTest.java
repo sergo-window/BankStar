@@ -6,7 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.skypro.recommendation_service.repository.UserDataRepository;
-import org.skypro.recommendation_service.service.rule.Invest500RuleSet;
+import org.skypro.recommendation_service.service.rule.impl.Invest500RuleSet;
 
 import java.math.BigDecimal;
 import java.util.Optional;
