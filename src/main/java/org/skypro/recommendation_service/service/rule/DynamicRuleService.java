@@ -4,15 +4,14 @@ import org.skypro.recommendation_service.model.dto.DynamicRuleRequest;
 import org.skypro.recommendation_service.model.dto.DynamicRuleResponse;
 import org.skypro.recommendation_service.model.dto.RecommendationDTO;
 import org.skypro.recommendation_service.model.entity.DynamicRule;
-import org.skypro.recommendation_service.model.enums.*;
 import org.skypro.recommendation_service.model.rule.DynamicRuleCondition;
 import org.skypro.recommendation_service.repository.DynamicRuleRepository;
-import org.skypro.recommendation_service.repository.UserDataRepository;
 import org.skypro.recommendation_service.service.RuleStatisticService;
 import org.skypro.recommendation_service.service.cache.RecommendationCacheService;
+import org.skypro.recommendation_service.service.rule.command.RuleCommand;
+import org.skypro.recommendation_service.service.rule.command.RuleCommandFactory;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -21,19 +20,19 @@ import java.util.stream.Collectors;
 public class DynamicRuleService {
 
     private final DynamicRuleRepository dynamicRuleRepository;
-    private final UserDataRepository userDataRepository;
     private final RecommendationCacheService cacheService;
     private final RuleStatisticService ruleStatisticService;
+    private final RuleCommandFactory ruleCommandFactory;
 
     public DynamicRuleService(
             DynamicRuleRepository dynamicRuleRepository,
-            UserDataRepository userDataRepository,
             RecommendationCacheService cacheService,
-            RuleStatisticService ruleStatisticService) {
+            RuleStatisticService ruleStatisticService,
+            RuleCommandFactory ruleCommandFactory) {
         this.dynamicRuleRepository = dynamicRuleRepository;
-        this.userDataRepository = userDataRepository;
         this.cacheService = cacheService;
         this.ruleStatisticService = ruleStatisticService;
+        this.ruleCommandFactory = ruleCommandFactory;
     }
 
     public List<RecommendationDTO> checkDynamicRulesForUser(UUID userId) {
@@ -44,7 +43,7 @@ public class DynamicRuleService {
                     .filter(rule -> {
                         boolean matches = evaluateRule(rule.getCondition(), userId);
                         if (matches) {
-                               ruleStatisticService.incrementRuleExecution(
+                            ruleStatisticService.incrementRuleExecution(
                                     rule.getId(), rule.getName()
                             );
                         }
@@ -60,76 +59,8 @@ public class DynamicRuleService {
     }
 
     private boolean evaluateRule(DynamicRuleCondition condition, UUID userId) {
-        return switch (condition.getRuleType()) {
-            case USER_OF -> evaluateUserOfRule(condition.getArguments(), userId);
-            case ACTIVE_USER_OF -> evaluateActiveUserOfRule(condition.getArguments(), userId);
-            case TRANSACTION_SUM_COMPARE -> evaluateTransactionSumCompareRule(condition.getArguments(), userId);
-            case TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW ->
-                    evaluateTransactionSumCompareDepositWithdrawRule(condition.getArguments(), userId);
-        };
-    }
-
-    private boolean evaluateUserOfRule(List<String> arguments, UUID userId) {
-        if (arguments.size() != 1) {
-            throw new IllegalArgumentException("USER_OF rule requires exactly 1 argument");
-        }
-        ProductType productType = ProductType.valueOf(arguments.get(0));
-        return userDataRepository.hasProductType(userId, productType.name());
-    }
-
-    private boolean evaluateActiveUserOfRule(List<String> arguments, UUID userId) {
-        if (arguments.size() != 1) {
-            throw new IllegalArgumentException("ACTIVE_USER_OF rule requires exactly 1 argument");
-        }
-        ProductType productType = ProductType.valueOf(arguments.get(0));
-
-        int transactionCount = userDataRepository.getTransactionCount(userId, productType.name());
-        return transactionCount >= 5;
-    }
-
-    private boolean evaluateTransactionSumCompareRule(List<String> arguments, UUID userId) {
-        if (arguments.size() != 4) {
-            throw new IllegalArgumentException("TRANSACTION_SUM_COMPARE rule requires exactly 4 arguments");
-        }
-
-        ProductType productType = ProductType.valueOf(arguments.get(0));
-        OperationType operationType = OperationType.valueOf(arguments.get(1));
-        ComparisonOperator operator = ComparisonOperator.fromSymbol(arguments.get(2));
-        BigDecimal comparisonValue = new BigDecimal(arguments.get(3));
-
-        BigDecimal totalAmount = userDataRepository.getTotalAmount(
-                userId, productType.name(), operationType
-        );
-
-        return compareValues(totalAmount, comparisonValue, operator);
-    }
-
-    private boolean evaluateTransactionSumCompareDepositWithdrawRule(List<String> arguments, UUID userId) {
-        if (arguments.size() != 2) {
-            throw new IllegalArgumentException("TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW rule requires exactly 2 arguments");
-        }
-
-        ProductType productType = ProductType.valueOf(arguments.get(0));
-        ComparisonOperator operator = ComparisonOperator.fromSymbol(arguments.get(1));
-
-        BigDecimal deposits = userDataRepository.getTotalAmount(
-                userId, productType.name(), OperationType.DEPOSIT
-        );
-        BigDecimal spends = userDataRepository.getTotalAmount(
-                userId, productType.name(), OperationType.SPEND
-        );
-
-        return compareValues(deposits, spends, operator);
-    }
-
-    private boolean compareValues(BigDecimal value1, BigDecimal value2, ComparisonOperator operator) {
-        return switch (operator) {
-            case GREATER_THAN -> value1.compareTo(value2) > 0;
-            case LESS_THAN -> value1.compareTo(value2) < 0;
-            case EQUALS -> value1.compareTo(value2) == 0;
-            case GREATER_THAN_OR_EQUALS -> value1.compareTo(value2) >= 0;
-            case LESS_THAN_OR_EQUALS -> value1.compareTo(value2) <= 0;
-        };
+        RuleCommand command = ruleCommandFactory.createCommand(condition);
+        return command.execute(userId);
     }
 
     public DynamicRuleResponse createRule(DynamicRuleRequest request) {
