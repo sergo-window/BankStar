@@ -35,16 +35,6 @@ public class TransactionSumCompareDepositWithdrawRuleCommand implements RuleComm
                 userId, productType.name(), OperationType.SPEND
         );
 
-        return compareValues(deposits, spends, operator);
-    }
-
-    private boolean compareValues(BigDecimal value1, BigDecimal value2, ComparisonOperator operator) {
-        return switch (operator) {
-            case GREATER_THAN -> value1.compareTo(value2) > 0;
-            case LESS_THAN -> value1.compareTo(value2) < 0;
-            case EQUALS -> value1.compareTo(value2) == 0;
-            case GREATER_THAN_OR_EQUALS -> value1.compareTo(value2) >= 0;
-            case LESS_THAN_OR_EQUALS -> value1.compareTo(value2) <= 0;
-        };
+        return operator.compare(deposits, spends);
     }
 }

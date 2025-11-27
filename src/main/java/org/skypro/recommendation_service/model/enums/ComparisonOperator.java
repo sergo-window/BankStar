@@ -1,5 +1,7 @@
 package org.skypro.recommendation_service.model.enums;
 
+import java.math.BigDecimal;
+
 public enum ComparisonOperator {
     GREATER_THAN(">"),
     LESS_THAN("<"),
@@ -23,6 +25,16 @@ public enum ComparisonOperator {
                 return operator;
             }
         }
-        throw new IllegalArgumentException("Unknown operator: " + symbol);
+        throw new IllegalArgumentException("Unknown comparison operator: " + symbol);
+    }
+
+    public boolean compare(BigDecimal value1, BigDecimal value2) {
+        return switch (this) {
+            case GREATER_THAN -> value1.compareTo(value2) > 0;
+            case LESS_THAN -> value1.compareTo(value2) < 0;
+            case EQUALS -> value1.compareTo(value2) == 0;
+            case GREATER_THAN_OR_EQUALS -> value1.compareTo(value2) >= 0;
+            case LESS_THAN_OR_EQUALS -> value1.compareTo(value2) <= 0;
+        };
     }
 }
