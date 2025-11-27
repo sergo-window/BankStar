@@ -1,4 +1,4 @@
-package org.skypro.recommendation_service;
+package org.skypro.recommendation_service.impl;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
