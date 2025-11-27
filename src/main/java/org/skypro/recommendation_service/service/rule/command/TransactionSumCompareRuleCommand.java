@@ -34,16 +34,6 @@ public class TransactionSumCompareRuleCommand implements RuleCommand {
                 userId, productType.name(), operationType
         );
 
-        return compareValues(totalAmount, comparisonValue, operator);
-    }
-
-    private boolean compareValues(BigDecimal value1, BigDecimal value2, ComparisonOperator operator) {
-        return switch (operator) {
-            case GREATER_THAN -> value1.compareTo(value2) > 0;
-            case LESS_THAN -> value1.compareTo(value2) < 0;
-            case EQUALS -> value1.compareTo(value2) == 0;
-            case GREATER_THAN_OR_EQUALS -> value1.compareTo(value2) >= 0;
-            case LESS_THAN_OR_EQUALS -> value1.compareTo(value2) <= 0;
-        };
+        return operator.compare(totalAmount, comparisonValue);
     }
 }
